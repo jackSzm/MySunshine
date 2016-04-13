@@ -116,7 +116,6 @@ public class WeatherProvider extends ContentProvider {
         matcher.addURI(authority, WeatherContract.PATH_WEATHER, WEATHER);
         matcher.addURI(authority, WeatherContract.PATH_WEATHER + "/*", WEATHER_WITH_LOCATION);
         matcher.addURI(authority, WeatherContract.PATH_WEATHER + "/*/#", WEATHER_WITH_LOCATION_AND_DATE);
-
         matcher.addURI(authority, WeatherContract.PATH_LOCATION, LOCATION);
         return matcher;
     }
@@ -189,7 +188,7 @@ public class WeatherProvider extends ContentProvider {
             default:
                 throw new UnsupportedOperationException("Unknown uri: " + uri);
         }
-        notifyChangeIfPossible(uri);
+        notifyChange(uri);
         return retCursor;
     }
 
@@ -222,7 +221,7 @@ public class WeatherProvider extends ContentProvider {
             default:
                 throw new UnsupportedOperationException("Unknown uri: " + uri);
         }
-        notifyChangeIfPossible(uri);
+        notifyChange(uri);
         return returnUri;
     }
 
@@ -237,19 +236,17 @@ public class WeatherProvider extends ContentProvider {
         }
         switch (match) {
             case WEATHER:
-                rowsDeleted = db.delete(
-                        WeatherContract.WeatherEntry.TABLE_NAME, selection, selectionArgs);
+                rowsDeleted = db.delete(WeatherContract.WeatherEntry.TABLE_NAME, selection, selectionArgs);
                 break;
             case LOCATION:
-                rowsDeleted = db.delete(
-                        WeatherContract.LocationEntry.TABLE_NAME, selection, selectionArgs);
+                rowsDeleted = db.delete(WeatherContract.LocationEntry.TABLE_NAME, selection, selectionArgs);
                 break;
             default:
                 throw new UnsupportedOperationException("Unknown uri: " + uri);
         }
         // Because a null deletes all rows
         if (rowsDeleted != 0) {
-            notifyChangeIfPossible(uri);
+            notifyChange(uri);
         }
         return rowsDeleted;
     }
@@ -270,20 +267,16 @@ public class WeatherProvider extends ContentProvider {
         switch (match) {
             case WEATHER:
                 normalizeDate(values);
-                rowsUpdated = db.update(WeatherContract.WeatherEntry.TABLE_NAME, values, selection,
-                                        selectionArgs
-                );
+                rowsUpdated = db.update(WeatherContract.WeatherEntry.TABLE_NAME, values, selection, selectionArgs);
                 break;
             case LOCATION:
-                rowsUpdated = db.update(WeatherContract.LocationEntry.TABLE_NAME, values, selection,
-                                        selectionArgs
-                );
+                rowsUpdated = db.update(WeatherContract.LocationEntry.TABLE_NAME, values, selection, selectionArgs);
                 break;
             default:
                 throw new UnsupportedOperationException("Unknown uri: " + uri);
         }
         if (rowsUpdated != 0) {
-            notifyChangeIfPossible(uri);
+            notifyChange(uri);
         }
         return rowsUpdated;
     }
@@ -308,14 +301,14 @@ public class WeatherProvider extends ContentProvider {
                 } finally {
                     db.endTransaction();
                 }
-                notifyChangeIfPossible(uri);
+                notifyChange(uri);
                 return returnCount;
             default:
                 return super.bulkInsert(uri, values);
         }
     }
 
-    private void notifyChangeIfPossible(Uri uri) {
+    private void notifyChange(Uri uri) {
         Context context = getContext();
         if (context != null) {
             ContentResolver contentResolver = context.getContentResolver();
