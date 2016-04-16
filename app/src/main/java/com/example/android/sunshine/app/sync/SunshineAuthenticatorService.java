@@ -9,12 +9,12 @@ import android.os.IBinder;
  */
 public class SunshineAuthenticatorService extends Service {
     // Instance field that stores the authenticator object
-    private SunshineAuthenticator mAuthenticator;
+    private SunshineStubAuthenticator mAuthenticator;
 
     @Override
     public void onCreate() {
         // Create a new authenticator object
-        mAuthenticator = new SunshineAuthenticator(this);
+        mAuthenticator = new SunshineStubAuthenticator(this);
     }
 
     /*
