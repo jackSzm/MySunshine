@@ -20,34 +20,17 @@ import android.content.ContentProvider;
 import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.ContentValues;
-import android.content.UriMatcher;
 import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.support.annotation.NonNull;
 
-import com.example.android.sunshine.app.data.WeatherContract.LocationEntry;
-import com.example.android.sunshine.app.data.WeatherContract.WeatherEntry;
-
 @SuppressWarnings("ConstantConditions")
 public class WeatherProvider extends ContentProvider {
 
-    private static final UriMatcher sUriMatcher = buildUriMatcher();
     private WeatherDbHelper mOpenHelper;
-
-    static final int WEATHER = 100;
-    static final int LOCATION = 300;
-
     private ContentResolver contentResolver;
-
-    static UriMatcher buildUriMatcher() {
-        final UriMatcher matcher = new UriMatcher(UriMatcher.NO_MATCH);
-        final String authority = WeatherContract.CONTENT_AUTHORITY;
-        matcher.addURI(authority, WeatherContract.PATH_WEATHER, WEATHER);
-        matcher.addURI(authority, WeatherContract.PATH_LOCATION, LOCATION);
-        return matcher;
-    }
 
     @Override
     public boolean onCreate() {
@@ -58,6 +41,10 @@ public class WeatherProvider extends ContentProvider {
 
     private SQLiteDatabase getReadableDatabase() {
         return mOpenHelper.getReadableDatabase();
+    }
+
+    private SQLiteDatabase getWritableDatabase() {
+        return mOpenHelper.getWritableDatabase();
     }
 
     @Override
@@ -83,10 +70,8 @@ public class WeatherProvider extends ContentProvider {
         SQLiteDatabase db = getWritableDatabase();
         String tableName = getTableName(uri);
         Uri returnUri;
-        normalizeDate(values);
         long id = db.insert(tableName, null, values);
-
-        if (id > 0) {
+        if (id != -1) {
             returnUri = ContentUris.withAppendedId(uri, id);
         } else {
             throw new SQLException("Failed to insert row into " + uri);
@@ -96,58 +81,27 @@ public class WeatherProvider extends ContentProvider {
         return returnUri;
     }
 
-    private SQLiteDatabase getWritableDatabase() {
-        return mOpenHelper.getWritableDatabase();
-    }
-
     @Override
     public int delete(@NonNull Uri uri, String selection, String[] selectionArgs) {
-        final SQLiteDatabase db = getWritableDatabase();
-        final int match = sUriMatcher.match(uri);
-        int rowsDeleted;
+        SQLiteDatabase db = getWritableDatabase();
+        String tableName = getTableName(uri);
+
         if (null == selection) {
             selection = "1";
         }
-        switch (match) {
-            case WEATHER:
-                rowsDeleted = db.delete(WeatherEntry.TABLE_NAME, selection, selectionArgs);
-                break;
-            case LOCATION:
-                rowsDeleted = db.delete(LocationEntry.TABLE_NAME, selection, selectionArgs);
-                break;
-            default:
-                throw new UnsupportedOperationException("Unknown uri: " + uri);
-        }
+
+        int rowsDeleted = db.delete(tableName, selection, selectionArgs);
         if (rowsDeleted != 0) {
             contentResolver.notifyChange(uri, null);
         }
         return rowsDeleted;
     }
 
-    private void normalizeDate(ContentValues values) {
-        if (values.containsKey(WeatherEntry.COLUMN_DATE)) {
-            long dateValue = values.getAsLong(WeatherEntry.COLUMN_DATE);
-            values.put(WeatherEntry.COLUMN_DATE, WeatherContract.normalizeDate(dateValue));
-        }
-    }
-
     @Override
     public int update(@NonNull Uri uri, ContentValues values, String selection, String[] selectionArgs) {
-        final SQLiteDatabase db = getWritableDatabase();
-        final int match = sUriMatcher.match(uri);
-        int rowsUpdated;
+        String tableName = getTableName(uri);
 
-        switch (match) {
-            case WEATHER:
-                normalizeDate(values);
-                rowsUpdated = db.update(WeatherEntry.TABLE_NAME, values, selection, selectionArgs);
-                break;
-            case LOCATION:
-                rowsUpdated = db.update(LocationEntry.TABLE_NAME, values, selection, selectionArgs);
-                break;
-            default:
-                throw new UnsupportedOperationException("Unknown uri: " + uri);
-        }
+        int rowsUpdated = getWritableDatabase().update(tableName, values, selection, selectionArgs);
         if (rowsUpdated != 0) {
             contentResolver.notifyChange(uri, null);
         }
@@ -156,29 +110,25 @@ public class WeatherProvider extends ContentProvider {
 
     @Override
     public int bulkInsert(@NonNull Uri uri, @NonNull ContentValues[] values) {
-        final SQLiteDatabase db = getWritableDatabase();
-        final int match = sUriMatcher.match(uri);
-        switch (match) {
-            case WEATHER:
-                db.beginTransaction();
-                int returnCount = 0;
-                try {
-                    for (ContentValues value : values) {
-                        normalizeDate(value);
-                        long _id = db.insert(WeatherEntry.TABLE_NAME, null, value);
-                        if (_id != -1) {
-                            returnCount++;
-                        }
-                    }
-                    db.setTransactionSuccessful();
-                } finally {
-                    db.endTransaction();
+        SQLiteDatabase db = getWritableDatabase();
+        String tableName = getTableName(uri);
+
+        db.beginTransaction();
+        int returnCount = 0;
+
+        try {
+            for (ContentValues value : values) {
+                long id = db.insert(tableName, null, value);
+                if (id != -1) {
+                    returnCount++;
                 }
-                contentResolver.notifyChange(uri, null);
-                return returnCount;
-            default:
-                return super.bulkInsert(uri, values);
+            }
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
         }
+        contentResolver.notifyChange(uri, null);
+        return returnCount;
     }
 
     @Override
