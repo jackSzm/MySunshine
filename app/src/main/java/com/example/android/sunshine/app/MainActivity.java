@@ -1,7 +1,6 @@
 package com.example.android.sunshine.app;
 
 import android.content.Intent;
-import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.app.FragmentManager;
 import android.support.v7.app.ActionBarActivity;
@@ -27,7 +26,7 @@ public class MainActivity extends ActionBarActivity implements ForecastFragment.
         if (findViewById(R.id.weather_detail_container) != null) {
             mTwoPane = true;
             if (savedInstanceState == null) {
-                replaceDetailFragment(new DetailFragment());
+                replaceDetailFragment(System.currentTimeMillis());
             }
         } else {
             mTwoPane = false;
@@ -82,34 +81,28 @@ public class MainActivity extends ActionBarActivity implements ForecastFragment.
         if (forecastFragment != null) {
             forecastFragment.onLocationChanged();
         }
-
-        DetailFragment detailFragment = (DetailFragment) fragmentManager.findFragmentByTag(DETAIL_FRAGMENT_TAG);
-        if (detailFragment != null) {
-            detailFragment.onLocationChanged(currentLocation);
-        }
     }
 
     @Override
-    public void onItemSelected(Uri contentUri) {
+    public void onItemSelected(long contentUri) {
         if (mTwoPane) {
-            DetailFragment fragment = buildDetailFragment(contentUri);
-            replaceDetailFragment(fragment);
+            replaceDetailFragment(contentUri);
         } else {
-            Intent intent = new Intent(this, DetailActivity.class)
-                    .setData(contentUri);
+            Intent intent = new Intent(this, DetailActivity.class).putExtra(DetailFragment.DETAIL_URI, contentUri);
             startActivity(intent);
         }
     }
 
-    private DetailFragment buildDetailFragment(Uri contentUri) {
+    private DetailFragment buildDetailFragment(long contentUri) {
         Bundle args = new Bundle();
-        args.putParcelable(DetailFragment.DETAIL_URI, contentUri);
+        args.putLong(DetailFragment.DETAIL_URI, contentUri);
         DetailFragment fragment = new DetailFragment();
         fragment.setArguments(args);
         return fragment;
     }
 
-    private void replaceDetailFragment(DetailFragment fragment) {
+    private void replaceDetailFragment(long date) {
+        DetailFragment fragment = buildDetailFragment(date);
         getSupportFragmentManager().beginTransaction().replace(R.id.weather_detail_container, fragment, DETAIL_FRAGMENT_TAG).commit();
     }
 }
