@@ -32,17 +32,17 @@ import com.example.android.sunshine.app.R;
 import com.example.android.sunshine.app.Utility;
 import com.example.android.sunshine.app.data.WeatherContract;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Vector;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 
 public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
     private static final int NO_LOCATION = -1;
@@ -77,54 +77,29 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
     @Override
     public void onPerformSync(Account account, Bundle extras, String authority, ContentProviderClient provider, SyncResult syncResult) {
         Log.d(LOG_TAG, "Starting sync");
-
-        String locationQuery = Utility.getPreferredLocation(context);
-
-        HttpURLConnection urlConnection = null;
-        BufferedReader reader = null;
-
         try {
-            URL url = SunshineUrlBuilder.buildUrl(locationQuery);
-            urlConnection = (HttpURLConnection) url.openConnection();
-            urlConnection.setRequestMethod("GET");
-            urlConnection.connect();
-
-            InputStream inputStream = urlConnection.getInputStream();
-            if (inputStream == null) {
-                return;
-            }
-            reader = new BufferedReader(new InputStreamReader(inputStream));
-
-            String line;
-            StringBuilder builder = new StringBuilder();
-            while ((line = reader.readLine()) != null) {
-                builder.append(line).append("\n");
-            }
-
-            if (builder.length() == 0) {
-                return;
-            }
-
-            String forecastJsonStr = builder.toString();
+            String locationQuery = Utility.getPreferredLocation(context);
+            String forecastJsonStr = getDataFromApi(locationQuery);
             getWeatherDataFromJson(forecastJsonStr, locationQuery);
-
-        } catch (IOException e) {
-            Log.e(LOG_TAG, "Error ", e);
         } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private String getDataFromApi(String locationParameter) {
+        String jsonResponse = null;
+        try {
+            URL url = SunshineUrlBuilder.buildUrl(locationParameter);
+            Request request = new Request.Builder().url(url).build();
+
+            OkHttpClient client = new OkHttpClient();
+            Response response = client.newCall(request).execute();
+            jsonResponse = response.body().string();
+        } catch (IOException e) {
             Log.e(LOG_TAG, e.getMessage(), e);
             e.printStackTrace();
-        } finally {
-            if (urlConnection != null) {
-                urlConnection.disconnect();
-            }
-            if (reader != null) {
-                try {
-                    reader.close();
-                } catch (final IOException e) {
-                    Log.e(LOG_TAG, "Error closing stream", e);
-                }
-            }
         }
+        return jsonResponse;
     }
 
     private void getWeatherDataFromJson(String forecastJsonStr, String locationName) throws JSONException {
