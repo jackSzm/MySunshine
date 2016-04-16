@@ -131,6 +131,7 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
 
                 JSONObject dayForecast = weatherArray.getJSONObject(i);
                 long dateTime = dayTime.setJulianDay(julianStartDay + i);
+
                 double pressure = dayForecast.getDouble("pressure");
                 int humidity = dayForecast.getInt("humidity");
                 double windSpeed = dayForecast.getDouble("speed");
@@ -191,9 +192,6 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
 
         if (displayNotifications) {
 
-            String lastNotificationKey = context.getString(R.string.pref_last_notification);
-            long lastSync = prefs.getLong(lastNotificationKey, 0);
-
             String locationQuery = Utility.getPreferredLocation(context);
             String dateToQuery = String.valueOf(WeatherContract.normalizeDate(System.currentTimeMillis()));
             String[] filterArgs = {dateToQuery, locationQuery};
@@ -207,19 +205,12 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
                     String desc = cursor.getString(INDEX_SHORT_DESC);
 
                     int iconId = Utility.getIconResourceForWeatherCondition(weatherId);
+
                     Resources resources = context.getResources();
-                    Bitmap largeIcon = BitmapFactory.decodeResource(
-                            resources,
-                            Utility.getArtResourceForWeatherCondition(weatherId)
-                    );
+                    Bitmap largeIcon = BitmapFactory.decodeResource(resources, Utility.getArtResourceForWeatherCondition(weatherId));
                     String title = context.getString(R.string.app_name);
 
-                    String contentText = String.format(
-                            context.getString(R.string.format_notification),
-                            desc,
-                            Utility.formatTemperature(context, high),
-                            Utility.formatTemperature(context, low)
-                    );
+                    String contentText = buildContentMessage(high, low, desc);
 
                     NotificationCompat.Builder mBuilder =
                             new NotificationCompat.Builder(context)
@@ -240,12 +231,18 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
                     mNotificationManager.notify(WEATHER_NOTIFICATION_ID, mBuilder.build());
 
                     SharedPreferences.Editor editor = prefs.edit();
-                    editor.putLong(lastNotificationKey, System.currentTimeMillis());
                     editor.apply();
                 }
                 cursor.close();
             }
         }
+    }
+
+    private String buildContentMessage(double high, double low, String desc) {
+        String notificationMessage = context.getString(R.string.format_notification);
+        String maxTemp = Utility.formatTemperature(context, high);
+        String minTemp = Utility.formatTemperature(context, low);
+        return String.format(notificationMessage, desc, maxTemp, minTemp);
     }
 
     private boolean isLocationInDb(String locationName) {
