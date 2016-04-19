@@ -51,7 +51,8 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
     private static final int FORECAST_LOADER = 0;
 
     private static final String[] FORECAST_COLUMNS = {
-            WeatherEntry.TABLE_NAME + "." + WeatherEntry._ID,
+//            WeatherEntry.TABLE_NAME + "." + WeatherEntry._ID,
+            WeatherEntry._ID,
             WeatherEntry.COLUMN_DATE,
             WeatherEntry.COLUMN_SHORT_DESC,
             WeatherEntry.COLUMN_MAX_TEMP,
