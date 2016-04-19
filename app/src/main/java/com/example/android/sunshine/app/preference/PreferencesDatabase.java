@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.MatrixCursor;
+import android.support.annotation.NonNull;
 
 import java.util.Map;
 
@@ -31,29 +32,36 @@ public class PreferencesDatabase {
     }
 
     @SuppressWarnings("unchecked")
-    private Map<String, JSONObject> getAll(String tableName) {
+    private Map<String, String> getAll(String tableName) {
         SharedPreferences preferences = getSharedPreferences(tableName);
-        return (Map<String, JSONObject>) preferences.getAll();
+        return (Map<String, String>) preferences.getAll();
     }
 
     public Cursor query(String tableName, String[] projection, String selection, String[] selectionArgs, Object o) {
 
         //TODO : Handle Selection , SelectionArgs and SORT
-        Map<String, JSONObject> all = getAll(tableName);
+        Map<String, String> all = getAll(tableName);
 
         MatrixCursor mc = new MatrixCursor(projection);
-        for (JSONObject jsonObject : all.values()) {
-            String[] values = new String[projection.length];
-            for (int i = 0; i < projection.length; i++) {
-                try {
-                    values[i] = jsonObject.getString(projection[i]);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
+        for (String object : all.values()) {
+            try {
+                JSONObject jsonObject = new JSONObject(object);
+                String[] values = populateArrayWithJson(projection, jsonObject);
+                mc.addRow(values);
+            } catch (JSONException e) {
+                e.printStackTrace();
             }
-            mc.addRow(values);
         }
         return mc;
+    }
+
+    @NonNull
+    private String[] populateArrayWithJson(String[] projection, JSONObject jsonObject) throws JSONException {
+        String[] values = new String[projection.length];
+        for (int i = 0; i < projection.length; i++) {
+            values[i] = jsonObject.getString(projection[i]);
+        }
+        return values;
     }
 
     public long insert(String tableName, Object o, ContentValues values) {
