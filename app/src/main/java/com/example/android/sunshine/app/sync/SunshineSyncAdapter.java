@@ -161,10 +161,8 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
             }
 
             if (weatherDays > 0) {
+                deletePreviousData(locationName);
                 contentResolver.bulkInsert(WeatherEntry.CONTENT_URI, contentValuesArray);
-
-                long outdatedDate = dayTime.setJulianDay(julianStartDay - 1);
-                deleteOutdatedData(outdatedDate);
 
                 notifyWeather();
             }
@@ -177,9 +175,9 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
         }
     }
 
-    private void deleteOutdatedData(long outDatedDate) {
-        String[] selectionArgs = {Long.toString(outDatedDate)};
-        contentResolver.delete(WeatherEntry.CONTENT_URI, WeatherEntry.COLUMN_DATE + " <= ?", selectionArgs);
+    private void deletePreviousData(String locationName) {
+        String[] selectionArgs = {locationName};
+        contentResolver.delete(WeatherEntry.CONTENT_URI, WeatherEntry.COLUMN_LOCATION_NAME + " = ?", selectionArgs);
     }
 
     private void notifyWeather() {
